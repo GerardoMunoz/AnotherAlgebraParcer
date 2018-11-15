@@ -1,0 +1,183 @@
+<script>
+class Caracter { constructor(c){this.caracter=c;}}
+class Digito extends Caracter{}
+class Espacio extends Caracter{}
+class Menos extends Caracter{}
+class Mas extends Caracter{}
+class Por extends Caracter{}
+class Sobre extends Caracter{}
+class ParentesisAbierto extends Caracter{ 
+  constructor(c,s){
+    super(c,s);
+    this.objetos=[];
+    this.superior=null
+  }
+  set nuevo(e){this.objetos=this.objetos.concat(e)};
+}
+class ParentesisCerrado extends Caracter{}
+class Igual extends Caracter{}
+class Variable extends Caracter{}
+
+let caracteres ={ 
+  ' ' : Espacio, 
+  '0' : Digito, 
+  '1' : Digito, 
+  '2' : Digito, 
+  '3' : Digito, 
+  '4' : Digito, 
+  '5' : Digito, 
+  '6' : Digito, 
+  '7' : Digito, 
+  '8' : Digito, 
+  '9' : Digito, 
+  '+' : Mas, 
+  '-' : Menos, 
+  '*' : Por, 
+  '/' : Sobre, 
+  '(' : ParentesisAbierto, 
+  ')' : ParentesisCerrado, 
+  '=' : Igual, 
+  'x' : Variable,
+  'y' : Variable,
+  'z' : Variable,
+}
+
+
+class Expresion  {
+  constructor(v,s,a){
+    if (v instanceof Array ) for (let i=0;i<v.length;i++) if (v instanceof Expresion ) v[i].superior=this;
+    else if (v instanceof Expresion )  v.superior=this
+    this.superior=s;
+    this.valor=v;
+    this.anterior=a;
+    
+  }
+  set nuevo(e){this.valor=this.valor.concat(e)}
+}
+class Arreglo extends Expresion{igual (v,s){return new Arreglo(v,s,this)}}
+class Natural extends Expresion {igual (v,s){return new Natural(v,s,this)}} // 
+class Parentesis extends Expresion {igual(v,s) {return new Parentesis(v,s,this)};}
+class Multiplicacion extends Expresion {igual(v,s) {return new Multiplicacion(v,s,this)}} 
+class Inverso extends Expresion {igual (v,s){return new Inverso(v,s,this)}} 
+class Suma extends Expresion {igual(v,s) {return new Suma(v,s,this)}} 
+class Opuesto extends Expresion {igual (v,s){return new Opuesto(v,s,this)}} 
+class Var extends Expresion {igual (v,s){return new Var(v,s,this)}} 
+
+let impls=[
+[//0
+  [Digito,Digito,(d1,d2,s)=>s.nuevo=[new Natural(Number(d1.caracter+d2.caracter),s,'0DD'+ci)]],
+  [Natural,Digito,(n,d,s)=>{n.valor=n.valor*10+Number(d.caracter);s.nuevo= [n]}],
+  [Object,Digito,(o,d,s)=>s.nuevo=[o,new Natural(Number(d.caracter),s,'0OD'+ci)]],
+],
+[//1
+  [Object,Digito,()=>debug],
+  [ParentesisAbierto,ParentesisAbierto,(pa1,pa2,s)=>{pa2.superior=pa1;s.nuevo= [pa1,pa2]}] ,
+  [ParentesisAbierto,ParentesisCerrado,(pa,pc,s)=> pa.superior.nuevo=[new Parentesis(pa.objetos,pa.superior,'1PaPc'+ci)]],
+  [ParentesisAbierto,Object,(pa,o,s)=>{pa.objetos.push(o);s.nuevo=[pa]}] ,
+  [Object,ParentesisAbierto,(o,pa,s)=>{pa.superior=s;s.nuevo=[o,pa]} ],
+],
+[//2
+  [Object,ParentesisAbierto,()=>debug],
+  [Object,ParentesisCerrado,()=>debug],
+  [Menos,Expresion,(m,e,s)=>s.nuevo=[new Mas('+',s,'2ME'+ci), new Opuesto(e,s,'2ME'+ci)]],
+  [Menos,Variable,(m,v,s)=>s.nuevo=[new Mas('+',s,'2MV'+ci), new Opuesto(new Var(v.caracter),s,'2MV'+ci)]],
+  [Object,Espacio,(o,e,s)=>s.nuevo=[o]],
+  [Object,Variable,(o,v,s)=>s.nuevo=[o,new Var(v.caracter,s,'2OV'+ci)]],
+],
+[//3
+  [Object,Espacio,()=>debug],
+  [Object,Variable,()=>debug],
+  [Object,Menos,()=>debug],
+  [Por,Mas,(s,m,su)=>su.nuevo=[s]],
+  [Sobre,Mas,(s,m,su)=>su.nuevo=[s]],
+  [Sobre,Expresion,(s,e,su)=>su.nuevo=[new Por('*',su,'3SE'+ci), new Inverso(e,su,'3SE')]],
+  [Sobre,Var,(s,v,su)=>su.nuevo=[new Por('*',su,'3SV'+ci), new Inverso(v,su,'3SV'+ci)]],
+],
+[//4
+  [Object,Sobre,()=>debug],
+  [Por,Mas,(m,s,su)=>su.nuevo=[m]],
+  [Multiplicacion,Mas,(m,s,su)=>su.nuevo=[m,s]],
+  [Multiplicacion,Expresion,(m,e,su)=>{m.valor.push(e);su.nuevo=[m]}],
+  [Multiplicacion,Por,(m,p,su)=>su.nuevo=[m]],
+  [Expresion,Por,(n,p,su)=>su.nuevo=[new Multiplicacion([n],su,'4EP'+ci)]],
+  [Expresion,Expresion,(o1,o2,su)=>su.nuevo = (su instanceof Multiplicacion)? [o1,o2]:[new Multiplicacion([o1,o2],su,'4EE'+ci)]],
+],
+[//5
+  [Object,Por,()=>debug],
+  [Suma,Expresion,(m,e,su)=>{m.valor.push(e);su.nuevo=[m]}],
+  [Suma,Mas,(m,p,su)=>su.nuevo=[m]],
+  [Expresion,Mas,(n,p,su)=>su.nuevo=[new Suma([n],su,'5EM'+ci)]],
+],
+]
+
+
+let datoss=new Arreglo([],null)
+
+let datos0 = '1-35 + 2 * 9875 / -987 -(32 (25-34))'
+let datos1 = [...(' '+datos0)].map((c)=>new caracteres[c](c))
+let datos2 = new Arreglo(datos1,datoss)
+datoss.nuevo = [datos2]
+
+
+var ci=0//contador_impl=0
+
+for (let j=0;j<impls.length;j++){
+  datoss.nuevo=[aplicaImpl(datoss.valor[j],impls[j])]
+}
+console.log('datos2b',datoss)
+
+function aplicaImpl(cont_viejo,impl){
+  ci++
+  if (ci==150) debugger
+  if (!(cont_viejo instanceof Expresion)) return cont_viejo
+  let cont_nuevo=cont_viejo.igual([],cont_viejo.superior)
+  if (cont_viejo.valor instanceof Array){
+    let acc1=cont_viejo.valor[0];
+    if (acc1 instanceof Expresion) acc1=acc1.igual(acc1.valor,cont_nuevo)
+    cont_nuevo.valor.push(acc1)
+      for (let i=1;i<cont_viejo.valor.length;i++){
+        let acc=cont_nuevo.valor.pop();
+        let b=cont_viejo.valor[i]
+        if (b instanceof Expresion) b=b.igual(b.valor,cont_nuevo)
+        let implicacion=impl.find((k)=>(acc instanceof k[0])&&(b instanceof k[1]))
+        if (implicacion!=undefined) implicacion[2](acc,b,cont_nuevo);
+        else cont_nuevo.nuevo=[acc,b];
+      }
+      for (let i=0;i<cont_nuevo.valor.length;i++) cont_nuevo.valor[i]=aplicaImpl(cont_nuevo.valor[i],impl)
+  }
+  else cont_nuevo.valor=aplicaImpl(cont_viejo.valor,impl)
+  return cont_nuevo;
+}
+
+
+function minstanceof(k,a,arreglo){
+let bool=(a instanceof k[0])
+console.log('minstanceof1',k,a,arreglo,bool)
+for (let i=1;i<k.length-1;i++){
+  bool=bool&&(arreglo[i] instanceof k[i])
+  console.log('minstanceof2',k,a,arreglo,bool,i)
+}
+console.log('minstanceof3',k,a,arreglo,bool)
+return bool
+}
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
