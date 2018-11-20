@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="es">
+<head>
+<style>
+caja {
+  margin: 3px;
+  border: 1px solid green;
+  padding: 3px;
+}
+</style>
+<meta charset="UTF-8">
+<title>Implicaciones.html</title>
+</head>
+<body>
+<input id="nombre" type="text" name="nombre" value="1-35x + 2 * 9875 / -987 -(32x (25-34+x))"><br>
+<button onclick="ejecutar()">Ejecutar</button>
+<div id='container'></div>
+<p id="demo"></p>
+
+
+
+<script>
+//class Dato { formula(){return typeof(this)}}
+class Caracter { 
+    constructor(c){this.caracter=c;}
+    toStr(){return this.caracter}//"'"+this.caracter+"'"}
+    toHtml(){return this.caracter}//"'"+this.caracter+"'"}
+}
+class Digito extends Caracter{}
+class Espacio extends Caracter{}
+class Menos extends Caracter{}
+class Mas extends Caracter{}
+class Por extends Caracter{}
+class Sobre extends Caracter{}
+class ParentesisAbierto extends Caracter{ 
+  constructor(c,s){
+    super(c,s);
+    this.objetos=[];
+    this.superior=null
+  }
+  set nuevo(e){this.objetos=this.objetos.concat(e)};
+}
+class ParentesisCerrado extends Caracter{}
+class Igual extends Caracter{}
+class Variable extends Caracter{}
+
+let caracteres ={ 
+  ' ' : Espacio, 
+  '0' : Digito, 
+  '1' : Digito, 
+  '2' : Digito, 
+  '3' : Digito, 
+  '4' : Digito, 
+  '5' : Digito, 
+  '6' : Digito, 
+  '7' : Digito, 
+  '8' : Digito, 
+  '9' : Digito, 
+  '+' : Mas, 
+  '-' : Menos, 
+  '*' : Por, 
+  '/' : Sobre, 
+  '(' : ParentesisAbierto, 
+  ')' : ParentesisCerrado, 
+  '=' : Igual, 
+  'x' : Variable,
+  'y' : Variable,
+  'z' : Variable,
+}
+let ib = '{'
+let fb = '}'
+let ibHtml = '<table border="1px"><td>'
+let fbHtml = '</td></table>'
+
+
+class Expresion  {
+  constructor(v,s,a){
+    if (v instanceof Array ) for (let i=0;i<v.length;i++) if (v instanceof Expresion ) v[i].superior=this;
+    else if (v instanceof Expresion )  v.superior=this
+    this.superior=s;
+    this.valor=v;
+    this.anterior=a;
+    
+  }
+  set nuevo(e){this.valor=this.valor.concat(e)}
+  //formula(){typeof(this)+'('+ ((this.valor instanceof Array)? this.valor.join():this.valor)+')'}
+}
+class Vector extends Expresion{
+  constructor(v,s,a,simb=''){super(v,s,a);this.simbolo=simb}
+  toHtml(){
+    let s=ibHtml+this.valor[0].toHtml();
+    let s1=(this.simbolo=='')?'</td><td>':'</td><td>'+this.simbolo+'</td><td>';
+    for(let i=1;i<this.valor.length;i++) s+=(s1+ this.valor[i].toHtml());//', '+
+    return s+fbHtml
+  }
+  toStr(){
+    let s=ib+this.valor[0].toStr();
+    for(let i=1;i<this.valor.length;i++) s+=this.simbolo + this.valor[i].toStr();//', '+
+    return s+fb
+  }
+}
+class Escalar extends Expresion{toStr(){return this.valor.toStr() };toHtml(){return this.valor.toHtml() }}
+class Arreglo extends Vector{igual (v,s){return new Arreglo(v,s,this)}}
+class Natural extends Escalar {toStr(){return ib+this.valor+fb};toHtml(){return this.valor};igual (v,s){return new Natural(v,s,this)};} // 
+class Parentesis extends Vector {igual(v,s) {return new Parentesis(v,s,this)};}
+class Multiplicacion extends Vector {
+  constructor(v,s,a){super(v,s,a,'*')}
+  igual(v,s) {return new Multiplicacion(v,s,this)}
+  //toStr(){return 'Multiplicacion' }
+} 
+class Inverso extends Escalar { toStr(){return ib+'1/'+super.toStr()+fb}; toHtml(){return ibHtml+'1<tr>'+super.toHtml()+fbHtml};igual (v,s){return new Inverso(v,s,this)}} 
+class Suma extends Vector {constructor(v,s,a){super(v,s,a,'+')};igual(v,s) {return new Suma(v,s,this)}} 
+class Ecuacion extends Vector {constructor(v,s,a){super(v,s,a,'=')};igual(v,s) {return new Ecuacion(v,s,this)}} 
+class Opuesto extends Escalar { toStr(){return ib+'-'+super.toStr()+fb};toHtml(){return ibHtml+'-</td><td>'+super.toHtml()+fbHtml};igual (v,s){return new Opuesto(v,s,this)}} 
+class Var extends Escalar {toStr(){return ib+this.valor+fb};toHtml(){return this.valor};igual (v,s){return new Var(v,s,this)};} 
+
+let impls=[
+[//0 Naturales
+  [Digito,Digito,(d1,d2,s)=>s.nuevo=[new Natural(Number(d1.caracter+d2.caracter),s,'0DD'+ci)]],
+  [Natural,Digito,(n,d,s)=>{n.valor=n.valor*10+Number(d.caracter);s.nuevo= [n]}],
+  [Object,Digito,(o,d,s)=>s.nuevo=[o,new Natural(Number(d.caracter),s,'0OD'+ci)]],
+],
+[// Parentesis
+  [Object,Digito,()=>{debugger;}],
+  [ParentesisAbierto,ParentesisAbierto,(pa1,pa2,s)=>{pa2.superior=pa1;s.nuevo= [pa1,pa2]}] ,
+  [ParentesisAbierto,ParentesisCerrado,(pa,pc,s)=> pa.superior.nuevo=[new Parentesis(pa.objetos,pa.superior,'1PaPc'+ci)]],
+  [ParentesisAbierto,Object,(pa,o,s)=>{pa.objetos.push(o);s.nuevo=[pa]}] ,
+  [Object,ParentesisAbierto,(o,pa,s)=>{pa.superior=s;s.nuevo=[o,pa]} ],
+],
+[//2 Opuesto
+  [Object,ParentesisAbierto,()=>{debugger;}],
+  [Object,ParentesisCerrado,()=>{debugger;}],
+  [Menos,Expresion,(m,e,s)=>s.nuevo=[new Mas('+',s,'2ME'+ci), new Opuesto(e,s,'2ME'+ci)]],
+  [Menos,Variable,(m,v,s)=>s.nuevo=[new Mas('+',s,'2MV'+ci), new Opuesto(new Var(v.caracter),s,'2MV'+ci)]],
+  [Object,Espacio,(o,e,s)=>s.nuevo=[o]],
+  [Object,Variable,(o,v,s)=>s.nuevo=[o,new Var(v.caracter,s,'2OV'+ci)]],
+],
+[//3 Inverso
+  [Object,Espacio,()=>{debugger;}],
+  [Object,Variable,()=>{debugger;}],
+  [Object,Menos,()=>{debugger;}],
+  [Por,Mas,(s,m,su)=>su.nuevo=[s]],
+  [Sobre,Mas,(s,m,su)=>su.nuevo=[s]],
+  [Sobre,Expresion,(s,e,su)=>su.nuevo=[new Por('*',su,'3SE'+ci), new Inverso(e,su,'3SE')]],
+  [Sobre,Var,(s,v,su)=>su.nuevo=[new Por('*',su,'3SV'+ci), new Inverso(v,su,'3SV'+ci)]],
+],
+[//4 Multiplicacion
+  [Object,Sobre,()=>{debugger;}],
+  [Por,Mas,(m,s,su)=>su.nuevo=[m]],
+  [Multiplicacion,Mas,(m,s,su)=>su.nuevo=[m,s]],
+  [Multiplicacion,Expresion,(m,e,su)=>{m.valor.push(e);su.nuevo=[m]}],
+  [Multiplicacion,Por,(m,p,su)=>su.nuevo=[m]],
+  [Expresion,Por,(n,p,su)=>su.nuevo=[new Multiplicacion([n],su,'4EP'+ci)]],
+  [Expresion,Expresion,(o1,o2,su)=>su.nuevo = (su instanceof Multiplicacion)? [o1,o2]:[new Multiplicacion([o1,o2],su,'4EE'+ci)]],
+],
+[//5 Suma
+  [Object,Por,()=>{debugger;}],
+  [Suma,Expresion,(m,e,su)=>{m.valor.push(e);su.nuevo=[m]}],
+  [Suma,Mas,(m,p,su)=>su.nuevo=[m]],
+  [Expresion,Mas,(n,p,su)=>su.nuevo=[new Suma([n],su,'5EM'+ci)]],
+],
+[//6 Ecuación
+  [Object,Mas,()=>{debugger;}],
+  [Ecuacion,Expresion,(ec,ex,su)=>{ec.valor.push(ex);su.nuevo=[ec]}],
+  [Ecuacion,Igual,(e,i,su)=>su.nuevo=[e]],
+  [Expresion,Igual,(e,i,su)=>su.nuevo=[new Ecuacion([e],su,'6EI'+ci)]],
+],
+]
+
+let container = document.getElementById ("container");
+let datoss=new Arreglo([],null)
+let ci=0//contador_impl=0
+//var newElem = document.createElement ("label");
+//newElem.innerHTML = "sample text";
+//container.appendChild (newElem);
+
+function ejecutar() {
+    //document.getElementById("demo").innerHTML = document.getElementById("nombre").value;
+
+
+
+
+let datos0 = document.getElementById("nombre").value;//'1-35x + 2 * 9875 / -987 -(32x (25-34+x))'
+let datos1 = [...(' '+datos0)].map((c)=>new caracteres[c](c))
+let datos2 = new Arreglo(datos1,datoss)
+datoss.nuevo = [datos2]
+
+demo=document.getElementById("demo")
+
+for (let j=0;j<impls.length;j++){
+  datoss.nuevo=[aplicaImpl(datoss.valor[j],impls[j])]
+  document.getElementById("demo").innerHTML +=datoss.valor[j].toStr()+'<br>'
+}
+demo.innerHTML +=datoss.valor[impls.length].toStr()+'<br>'
+console.log('datos2b',datoss)
+
+for (let j=0;j<impls.length+1;j++){
+  dat=datoss.valor[j].toHtml()+'<br>';
+  console.log(dat);
+  console.log('/n');
+  demo.innerHTML = demo.innerHTML + dat;
+}
+
+}
+function aplicaImpl(cont_viejo,impl){
+  ci++
+  //if (ci==231) debugger
+  if (!(cont_viejo instanceof Expresion)) return cont_viejo
+  let cont_nuevo=cont_viejo.igual([],cont_viejo.superior)
+  if (cont_viejo.valor instanceof Array){
+    let acc1=cont_viejo.valor[0];
+    if (acc1 instanceof Expresion) acc1=acc1.igual(acc1.valor,cont_nuevo)
+    cont_nuevo.valor.push(acc1)
+      for (let i=1;i<cont_viejo.valor.length;i++){
+        let acc=cont_nuevo.valor.pop();
+        //let b=cont_viejo.valor[i]
+        //if (b instanceof Expresion) b=b.igual(b.valor,cont_nuevo)
+        //let implicacion=impl.find((k)=>(acc instanceof k[0])&&(b instanceof k[1]))
+        let implicacion=impl.find((k)=> minstanceof(k,acc,cont_viejo.valor,i))
+        if (implicacion!=undefined){       
+          p=([acc].concat(cont_viejo.valor.slice(i,i+implicacion.length-2)).concat([cont_nuevo]))
+          implicacion[implicacion.length-1](...p);
+        }
+        else{
+          let b=cont_viejo.valor[i]
+          if (b instanceof Expresion) b=b.igual(b.valor,cont_nuevo)
+          cont_nuevo.nuevo=[acc,b];
+        }
+      }
+      for (let i=0;i<cont_nuevo.valor.length;i++) cont_nuevo.valor[i]=aplicaImpl(cont_nuevo.valor[i],impl)
+  }
+  else cont_nuevo.valor=aplicaImpl(cont_viejo.valor,impl)
+  return cont_nuevo;
+}
+
+
+function minstanceof(ka,a,arreglo,ini){
+let bool=(a instanceof ka[0])
+//console.log('minstanceof1',ka,a,arreglo,ini,bool)
+for (let h=1;h<ka.length-1;h++){
+  bool=bool&&(arreglo[h+ini-1] instanceof ka[h])
+  //console.log('minstanceof2',ka,a,arreglo,bool,h)
+}
+//console.log('minstanceof3',ka,a,arreglo,bool)
+return bool
+}
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
