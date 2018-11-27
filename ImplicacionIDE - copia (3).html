@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="es">
+<head>
+<style>
+/* Tooltip container */
+.tooltip {
+    position: relative;
+    display: inline-block;
+    border-bottom: 1px dotted black; /* If you want dots under the hoverable text */
+}
+
+/* Tooltip text */
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 120px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    padding: 5px 0;
+    border-radius: 6px;
+ 
+    /* Position the tooltip text - see examples below! */
+    position: absolute;
+    z-index: 1;
+}
+
+/* Show the tooltip text when you mouse over the tooltip container */
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+}
+</style>
+
+<meta charset="UTF-8">
+<title>Implicaciones.html</title>
+</head>
+<body>
+
+<div id='Niveles'></div>
+<hr>
+<div id='Implicaciones'></div>
+<hr>
+<div><input id="entrada" type="text" name="entrada" value="1-35x + 2 * 9875 / -987 -(32x (25-34+x))=x">
+<button onclick="draw()">Ejecutar</button></div>
+<hr>
+<div><canvas id="Canvas" width="600" height="300"></canvas></div>
+<div id='Imagenes'></div>
+
+<script>
+const ESTILO_LETRA="Arial"
+const TAMANO_LETRA=15
+const MARGEN=3
+const CONSTR_X=290
+const CONSTR_y=250
+let pasos=100
+let ci=0
+let contexto=null
+
+dibuja_string=function(ctx,r,texto){
+    ctx.fillText(texto,r[0]+MARGEN,r[1])
+}
+text2rectangulo=function(ctx,texto,k=1,x=0,y=0){
+  let metricas=ctx.measureText(texto)
+  return [x, y, metricas.width+2*MARGEN, k*TAMANO_LETRA]
+}
+
+
+
+class Componente {
+  constructor(v,s,a,n,r=[CONSTR_X,CONSTR_y,10,10]){
+    this.valor=v;
+    this.superior=s;
+    this.anterior=a;
+    this.nombre=n;
+    this.rectangulo=r
+  }
+  //get rectangulo(){return this.rectangulo}
+  actualizar(){this.superior.actualizar()}
+  movera(x,y){this.rectangulo[0]=x,this.rectangulo[1]=y}
+  arrimar(n){
+    this.valor=this.valor.concat(n)
+    let i=0
+    let comp=this
+    while(true){
+      console.log('frame',n,i,n[i],this,comp)
+      if (comp.rectangulo[0]==undefined)debugger
+      n[i].movera(comp.rectangulo[0]+comp.rectangulo[2],comp.rectangulo[1])
+      comp.rectangulo[2]+=n[i].rectangulo[2]
+      comp.rectangulo[3]=Math.max(n[i].rectangulo[3]+MARGEN,comp.rectangulo[3])
+      i++
+      if(i>=n.length)break
+    }
+    this.actualizar()
+    let a=0
+    console.log('a',a)
+  }
+  dibujar(ctx){
+    ci++
+    console.log('dibujar',this)
+    ctx.strokeRect(...this.rectangulo)
+
+    for (let i in  this.valor){
+      let v1=this.valor[i]
+      v1.dibujar(ctx)//,x,y)
+    }
+  }
+ }
+class Tablero extends Componente{
+  constructor(v,s,a,n,r){
+      var canvas = document.getElementById('Canvas');
+      if (canvas.getContext) {
+        let ctx1 = canvas.getContext('2d');
+        ctx1.strokeRect(0,0,canvas.width,canvas.height)
+        contexto=ctx1
+        ctx1.textBaseline="top"
+        ctx1.font=''+TAMANO_LETRA+'px '+ESTILO_LETRA
+        super(v,s,a,n,r)
+        this.ctx=ctx1
+        this.canvas=canvas
+        ctx1.strokeRect(...this.rectangulo);
+      }
+  }
+  actualizar(){
+    this.ctx.clearRect(0,0,this.canvas.width,this.canvas.heigh)
+    this.dibujar(this.ctx)
+  }
+}
+class Renglon extends Componente{}
+class Expresion extends Componente{}
+class Unaria extends Expresion{}
+class eNearia extends Expresion{}
+class TerminalTx extends Expresion{
+  constructor(v,s=null,a=null,n=null,x1=0,y1=0){
+    super(v,s,a,n,text2rectangulo(contexto,v,1.2,x1,y1));
+  }
+  dibujar(ctx){
+    let r=this.rectangulo
+    dibuja_string(ctx,r,this.valor)
+  } 
+  
+}
+class TerminalNoExp extends Componente{
+  constructor(v,s=null,a=null,n=null,x1=0,y1=0){
+    super(v,s,a,n,text2rectangulo(contexto,v,1.5,x1,y1));
+  }
+  dibujar(ctx){
+    let r=this.rectangulo
+    dibuja_string(ctx,r,this.valor)
+  } 
+  
+}
+class Simbolo extends TerminalNoExp{}
+class Fraccion extends Expresion{}
+class Espacio extends TerminalNoExp{}
+class Menos extends Simbolo{}
+class Mas extends Simbolo{}
+class Por extends Simbolo{}
+class Sobre extends Simbolo{}
+class ParentesisAbierto extends Simbolo{}
+class ParentesisCerrado extends Simbolo{}
+class Igual extends Simbolo{}
+class Variable extends TerminalTx{}
+class Doble extends TerminalTx {}
+class Natural extends Doble {}
+class Digito extends Natural{}
+class Parentesis extends eNearia {}
+class Multiplicacion extends eNearia {}
+class Inverso extends Unaria {}
+class Suma extends eNearia {}
+class Ecuacion extends eNearia {}
+class Opuesto extends Fraccion {}
+class Borde extends Componente {}
+
+clases={Expresion,Simbolo,Unaria,eNearia,TerminalTx,Digito,Espacio,Menos,Mas,Por,Sobre,ParentesisAbierto,ParentesisCerrado,Igual,Variable,Natural,Parentesis,Multiplicacion,Inverso,Suma,Ecuacion,Opuesto,Borde}
+
+
+let caracteres ={ 
+  ' ' : Espacio, 
+  '0' : Digito, 
+  '1' : Digito, 
+  '2' : Digito, 
+  '3' : Digito, 
+  '4' : Digito, 
+  '5' : Digito, 
+  '6' : Digito, 
+  '7' : Digito, 
+  '8' : Digito, 
+  '9' : Digito, 
+  '+' : Mas, 
+  '-' : Menos, 
+  '*' : Por, 
+  '/' : Sobre, 
+  '(' : ParentesisAbierto, 
+  ')' : ParentesisCerrado, 
+  '=' : Igual, 
+  'x' : Variable,
+  'y' : Variable,
+  'z' : Variable,
+}
+
+Implicaciones=[
+{
+nombre:'Im_Natural',
+valor:[
+  ['Digito','Digito',(d1,d2,s)=>s.nuevo=[new Natural(Number(d1.caracter+d2.caracter),s,null,'0DD'+ci)]],
+  ['Natural','Digito',(n,d,s)=>{n.valor=n.valor*10+Number(d.caracter);s.nuevo= [n]}],
+  ['Object','Digito',(o,d,s)=>s.nuevo=[o,new Natural(Number(d.caracter),s,null,'0OD'+ci)]],
+]},
+{nombre:'Im_Parentesis',
+valor:[
+  ['Object','Digito',()=>{debugger;}],
+  ['ParentesisAbierto','ParentesisAbierto',(pa1,pa2,s)=>{pa2.superior=pa1;s.nuevo= [pa1,pa2]}] ,
+  ['ParentesisAbierto','ParentesisCerrado',(pa,pc,s)=> pa.superior.nuevo=[new Parentesis(pa.objetos,pa.superior,null,'1PaPc'+ci)]],
+  ['ParentesisAbierto','Object',(pa,o,s)=>{pa.objetos.push(o);s.nuevo=[pa]}] ,
+  ['Object','ParentesisAbierto',(o,pa,s)=>{pa.superior=s;s.nuevo=[o,pa]} ],
+]}]
+//Niveles={Im_Natural,Im_Parentesis}
+
+
+
+
+Cont_niv=document.getElementById("Niveles")
+//niv_k=Object.keys(Niveles)
+for (let i in Implicaciones){
+  let boton=document.createElement('button');
+  boton.innerHTML+=Implicaciones[i]['nombre'];
+  boton.onclick= function (){actrualiza_implicaciones(i)}
+  Cont_niv.appendChild(boton)
+}
+
+Cont_imp=document.getElementById("Implicaciones")
+actrualiza_implicaciones=function(nivel){
+  Cont_imp.textContent=''
+  let Impl=Implicaciones[nivel]['valor']
+  for (let i in Impl){
+    let boton=document.createElement('button');
+    boton.innerHTML+=''+Impl[i];
+    Cont_imp.appendChild(boton)
+  }
+}
+
+let tablero=new Tablero([],null,null,'tablero',[10,10,10,10])
+let ren0 = new Renglon([],tablero,null,'renglon_0',[0,100,10,10])
+tablero.arrimar ( [ren0])
+let datos0 = document.getElementById("entrada").value;
+for (i in datos0){
+  c=datos0[i]
+  ren0.arrimar([new caracteres[c](c,ren0,null,'caracter_'+c)])
+}
+
+
+
+</script>
+</body>
+</html>
