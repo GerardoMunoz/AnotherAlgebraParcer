@@ -1,0 +1,139 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <style>
+      body {
+        margin: 0px;
+        padding: 0px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="myCanvas" width="578" height="200"></canvas>
+    <script>
+      let temp=0
+      const MARGEN=5
+      let elementos=[]
+      let elem_seleccionado=null
+      let mensajeTemporal='Vacío'
+      let canvas = document.getElementById('myCanvas');
+      let context = canvas.getContext('2d');
+      const FONT_SIZE = 18//'18pt Calibri';
+      const FONT_TYPE = 'Calibri';
+      context.font = ''+FONT_SIZE +'pt '+FONT_TYPE;
+      context.fillStyle = 'black';
+      context.textBaseline='top'
+      const MODO = 'mouse' //'touch' 
+
+      class Contenedor extends Array{
+        constructor(ctx,x,y,s){
+          super()
+          this.valor=temp++
+          let ancho=context.measureText(this.valor).width+MARGEN*2         
+          this.rectangulo=[x,y,ancho, 2*FONT_SIZE]
+          this.color='black'
+          this.superior=s
+        }
+        esinterior(x,y){
+          let x1=x-this.rectangulo[0]
+          let y1=y-this.rectangulo[1]
+          return (0<x1)&&(x1<this.rectangulo[2])&&(0<y1)&&(y1<this.rectangulo[3])
+        }
+        arrima(e){
+          if (this instanceof Contenedor && this != e) 
+          {
+            this.push(e)
+            elementos.splice(elementos.indexOf(e),1)
+            e.rectangulo[0]=this.rectangulo[2]
+            e.rectangulo[1]=MARGEN
+            this.rectangulo[2]=this.rectangulo[2]+e.rectangulo[2]
+            this.rectangulo[3]=Math.max(this.rectangulo[3],e.rectangulo[3]+2*MARGEN)
+          }
+        }
+        imprimirse(context,x,y)
+        { 
+          context.strokeStyle=this.color
+          //if (this.length==0){
+            context.strokeText(this.valor,x+this.rectangulo[0]+MARGEN,y+this.rectangulo[1])        
+          //}
+          //else
+          {
+            for (let i=0;i<this.length;i++){
+              //if (x+this.rectangulo[0]==undefined || y+this.rectangulo[1]==undefined) debugger
+              this[i].imprimirse(context,x+this.rectangulo[0],y+this.rectangulo[1])
+            }
+          }
+          context.strokeRect(this.rectangulo[0]+x,this.rectangulo[1]+y,this.rectangulo[2],this.rectangulo[3])
+        }     
+      }
+
+
+
+
+      
+      function imprimirTodo() {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.fillText(mensajeTemporal, 10, 25);
+        context.strokeRect(0,0,canvas.width,canvas.height-1)
+        for (let i in elementos){
+          elementos[i].imprimirse(context,0,0)
+        }
+      }
+      
+      function xy(evt){
+        let rect = canvas.getBoundingClientRect()
+        if (evt instanceof TouchEvent) return [evt.changedTouches[0].clientX - rect.left,evt.changedTouches[0].clientY - rect.top]
+        else return [evt.clientX - rect.left,evt.clientY - rect.top]
+      }
+
+      canvas.addEventListener((MODO=='mouse')?'mousemove':'touchmove',mouse_moviendose, false);
+      //canvas.addEventListener('mousemove',mouse_moviendose , false);
+      //canvas.addEventListener('touchmove',mouse_moviendose , false);
+      
+      function mouse_moviendose(evt) {
+        [x,y]=xy(evt)
+        let ele=elementos.find((e)=>e.esinterior(x,y))
+        if (ele!=null)ele.color='red'
+        mensajeTemporal = 'Mouse position: ' + x + ',' + y+ele;//(ele==undefined)?'Elemento':
+        if (elem_seleccionado!=null){
+          elem_seleccionado.rectangulo[0]=x//+elem_seleccionado_dx
+          elem_seleccionado.rectangulo[1]=y//+elem_seleccionado_dy
+        }
+        imprimirTodo();
+        if (ele!=null)ele.color='black'
+        
+      }
+
+      canvas.addEventListener((MODO=='mouse')?'mouseup':'touchstart',mouse_soltando, false);
+      //canvas.addEventListener('touchstart',mouse_soltando, false);
+      //canvas.addEventListener('mouseup',mouse_soltando, false);
+      //canvas.addEventListener('mouseleave',mouse_soltando, false);
+      
+      function mouse_soltando(evt) {
+        if (elem_seleccionado!=null){
+          [x,y]=xy(evt)
+          let elem2=elementos.find((e)=>e.esinterior(x,y))
+          if (elem2!=undefined) elem2.arrima(elem_seleccionado)
+        }
+        elem_seleccionado=null
+      }
+
+      canvas.addEventListener((MODO=='mouse')?'mousedown':'touchend',mouse_oprimiendo, false);
+      //canvas.addEventListener('touchend', mouse_oprimiendo, false);
+      //canvas.addEventListener('mousedown', mouse_oprimiendo, false);
+      
+      function mouse_oprimiendo(evt) {
+        [x,y]=xy(evt)
+        elem_seleccionado=elementos.find((e)=>e.esinterior(x,y))
+        if (elem_seleccionado==null){
+          e=new Contenedor(context,x,y,elementos)//[x-MARGEN,y-MARGEN,2*MARGEN,2*MARGEN])
+          elementos.push(e)
+          elem_seleccionado=e
+        }
+        imprimirTodo();
+      }
+
+    </script>
+  </body>
+</html>
+      
