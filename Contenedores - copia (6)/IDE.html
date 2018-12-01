@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es">
+<head>
+<style>
+/* Tooltip container */
+.tooltip {
+    position: relative;
+    display: inline-block;
+    border-bottom: 1px dotted black; /* If you want dots under the hoverable text */
+}
+
+/* Tooltip text */
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 120px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    padding: 5px 0;
+    border-radius: 6px;
+ 
+    /* Position the tooltip text - see examples below! */
+    position: absolute;
+    z-index: 1;
+}
+
+/* Show the tooltip text when you mouse over the tooltip container */
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+}
+</style>
+
+<meta charset="UTF-8">
+<title>Implicaciones.html</title>
+</head>
+<body>
+<hr>
+<div id='Niveles'></div>
+<hr>
+<div id='Implicaciones'></div>
+<hr>
+<div><input id="entrada" type="text" name="entrada" value="1-35x + 2 * 9875 / -987 -(32x (25-34+x))=x">
+<button onclick="ingresar()">Ingresar</button></div>
+<hr>
+<div><canvas id="canvas" width="1200" height="800"></canvas></div>
+<div id='Imagenes'></div>
+
+<script src='implicaciones.js'></script>
+<script src='dinamica.js'></script>
+
+
+
+</script>
+</body>
+</html>
