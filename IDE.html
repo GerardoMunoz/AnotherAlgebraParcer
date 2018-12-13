@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="es">
+<head>
+<style>
+/* Tooltip container */
+.tooltip {
+    position: relative;
+    display: inline-block;
+    border-bottom: 1px dotted black; /* If you want dots under the hoverable text */
+}
+
+/* Tooltip text */
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 120px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    padding: 5px 0;
+    border-radius: 6px;
+ 
+    /* Position the tooltip text - see examples below! */
+    position: absolute;
+    z-index: 1;
+}
+
+/* Show the tooltip text when you mouse over the tooltip container */
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+}
+</style>
+
+<meta charset="UTF-8">
+<title>Implicaciones.html</title>
+</head>
+<body>
+<hr>
+<div id='Niveles'></div>
+<hr>
+<div id='Implicaciones'></div>
+<hr>
+<div><textarea rows="10" cols="120" id="entrada" >
+let cont0=un(Contenedor).en({x:100,y:100}).se_crea
+
+txt1="1-35x + 2 * 9875 / -987 -(32x (25-34+x))=x" 
+for (j in txt1){
+let i=txt1[j]
+let caracter=caracteres[i]
+un(caracter).con(i).bajo(cont0).se_crea
+}
+
+let c43=un(Contenedor).en({x:226,y:271}).se_crea//43
+el(c43).se_mueve_a({x:226,y:271})
+let c44=un(Contenedor).en({x:400,y:286}).se_crea//44
+el(c44).se_mueve_a({x:400,y:286})
+let c45=el(c44).se_copia
+el(c45).se_mueve_a({x:248,y:283})
+el(c43).se_arrima_a(c45)
+el(c44).se_saca
+ </textarea>
+<!--div><input id="entrada" type="text" name="entrada" value="1-35x + 2 * 9875 / -987 -(32x (25-34+x))=x"-->
+<button onclick="ejecutar()">Ejecutar</button></div>
+<hr>
+<div><canvas id="canvas" width="1200" height="400"></canvas></div>
+<!--div><canvas id="otro_canvas" width="1200" height="200"></canvas></div-->
+<div id='imagenes'></div>
+<div id='codigo'></div>
+<script>
+      let canvas = document.getElementById('canvas');
+      let context = canvas.getContext('2d');
+      let otro_canvas = document.createElement('canvas')//getElementById('otro_canvas');
+      let otro_context = otro_canvas.getContext('2d');
+      let imagenes = document.getElementById('imagenes');
+      let codigo = document.getElementById('codigo');
+      let entrada = document.getElementById('entrada')
+      //console.log('imagenes',imagenes)
+      
+      
+      let contenedores={}
+      let elementos=[]
+      let herramientas=[]
+      let animacion=[]
+      let elem_seleccionado=null
+      let elem_a_copiar=null
+      let deplaz=null
+      //let deplaz_orig=null
+
+      let estampilla=0
+      let cont_crear=0
+      const MARGEN=3
+      let mensajeTemporal='Vacío'
+      const FONT_SIZE = 12//'18pt Calibri';
+      const FONT_TYPE = 'Calibri';
+      context.font = ''+FONT_SIZE +'pt '+FONT_TYPE;
+      context.fillStyle = 'black';
+      context.textBaseline='top'
+      const MODO = 'mouse' //'touch' 
+      const PASOS=10;
+      let mspf=PASOS*1//velocidad
+      
+</script>
+<script>
+class Contenedor extends Array{
+  constructor(v,x,y,s,n,a){
+    super()
+    this.valor=v
+    this.color='black'
+    this.superior=s
+    this.anteriror=a
+    this.nombre=n 
+    this.inicio='['
+    this.intermedio=',' 
+    this.fin=']'
+    this.rectangulo=[x,y,0, 2*FONT_SIZE]
+    this.recalculaAncho()
+    //this.inicio_ancho=context.measureText( this.inicio).width//+MARGEN*2
+    //this.intermedio_ancho=context.measureText( this.intermedio).width//+MARGEN*2 
+    //this.fin_ancho=context.measureText(this.fin).width//+MARGEN*2
+    //this.valor_ancho=context.measureText(this.valor).width
+    //let ancho=this.valor_ancho+MARGEN*2+this.inicio_ancho+ this.fin_ancho      
+    //console.log('Contenedor',v,ancho,this.valor_ancho,MARGEN*2,this.inicio_ancho, this.fin_ancho)      
+    this.imp_val=true
+    this.imp_ini=true
+    this.imp_fin=true
+    this.imp_array=true
+  }
+  recalculaAncho(){
+    this.inicio_ancho=context.measureText( this.inicio).width//+MARGEN*2
+    this.intermedio_ancho=context.measureText( this.intermedio).width//+MARGEN*2 
+    this.fin_ancho=context.measureText(this.fin).width//+MARGEN*2
+    this.valor_ancho=context.measureText(this.valor).width
+    let ancho=this.valor_ancho+MARGEN*2+this.inicio_ancho+ this.fin_ancho      
+    //console.log('Contenedor',this.valor,ancho,this.valor_ancho,MARGEN*2,this.inicio_ancho, this.fin_ancho)      
+    this.rectangulo[2]=ancho
+  }
+  esSinArray(){
+    this.inicio=''
+    this.intermedio='' 
+    this.fin=''
+    this.recalculaAncho()
+  }
+  
+  esinterior(x,y){
+    let x1=x-this.rectangulo[0]
+    let y1=y-this.rectangulo[1]
+    return (0<x1)&&(x1<this.rectangulo[2])&&(0<y1)&&(y1<this.rectangulo[3])
+    
+  }
+  
+  elementoEn(x,y){
+    let x1=x-this.rectangulo[0];
+    let y1=y-this.rectangulo[1];
+    let ele=this.find((e)=>e.esinterior(x1,y1));
+    if (ele!=null) return ele.elementoEn(x1,y1);
+    else return this;
+  }
+  
+  copiar(){//despues de copiar hay que arrimar o colocar en elementos
+    //let tipo=this
+    //if (nombre==undefined)nombre=cont_crear++
+    let nuevo = new  this.constructor(this.valor,this.rectangulo[0],this.rectangulo[1],undefined,cont_crear++,this)
+    contenedores[nuevo.nombre]=nuevo
+    for (let i=0;i<this.length;i++) nuevo.arrima(this[i].copiar())
+    return nuevo
+  }
+  
+  arrima(e){
+    if (this instanceof Contenedor && this != e) 
+    {
+      this.push(e)
+      //elementos.splice(elementos.indexOf(e),1)//for
+      if(this.length==1)e.rectangulo[0]= this.rectangulo[2]-this.fin_ancho
+      else e.rectangulo[0]= this.rectangulo[2]-this.fin_ancho+this.intermedio_ancho+MARGEN
+      e.rectangulo[1]=MARGEN
+      this.rectangulo[2]=e.rectangulo[0]+e.rectangulo[2]+this.fin_ancho+MARGEN//this.rectangulo[2]+e.rectangulo[2]
+      this.rectangulo[3]=Math.max(this.rectangulo[3],e.rectangulo[3]+2*MARGEN)
+      e.superior=this
+    }
+  }
+  
+  
+  imprimirse(contexto,x,y)
+  { 
+    contexto.strokeStyle=this.color
+      let anterior_x=x+this.rectangulo[0]+MARGEN  
+      let anterior_y= y+this.rectangulo[1] 
+      if (this.imp_val==true){
+        contexto.strokeText(this.valor,anterior_x,anterior_y);
+        anterior_x=this.valor_ancho+anterior_x;
+      }
+      if (this.imp_ini==true){
+        contexto.strokeText(this.inicio,anterior_x,anterior_y) 
+        anterior_x=anterior_x+this.inicio_ancho   
+      }
+      if (this.imp_fin==true){
+      contexto.strokeText(this.fin,x+this.rectangulo[0]+this.rectangulo[2]-this.fin_ancho,y+this.rectangulo[1])
+      }        
+      contexto.strokeRect(this.rectangulo[0]+x,this.rectangulo[1]+y,this.rectangulo[2],this.rectangulo[3])
+      //console.log('imprimirse',contexto)
+      if (this.imp_array==true){              
+        for (let i=0;i<this.length;i++){
+          let siguiente_x=this[i].rectangulo[0]//+this[0].rectangulo[2]//anterior_x+this.inicio_ancho     
+          let siguiente_y=this[i].rectangulo[1]//+this[0].rectangulo[3]//anterior_x+this.inicio_ancho     
+          if (i!=0)contexto.strokeText(this.intermedio,x+this.rectangulo[0]+anterior_x+MARGEN,y+this.rectangulo[1])  
+          anterior_x=siguiente_x+this[i].rectangulo[2]//anterior_x+this.inicio_ancho     
+          anterior_y=siguiente_y+this[i].rectangulo[3]//anterior_x+this.inicio_ancho     
+          this[i].imprimirse(contexto,x+this.rectangulo[0],y+this.rectangulo[1])
+        }
+      }
+  }
+  posAbs(){
+    let x=this.rectangulo[0]
+    let y=this.rectangulo[1]
+    let sup=this.superior
+    console.log('posAbs1',x,y,this)
+    while(sup instanceof Contenedor){
+      x+=sup.rectangulo[0]
+      y+=sup.rectangulo[1]
+      sup=sup.suprior
+      console.log('posAbs2',x,y,this)
+    }
+    //if MODO!='touch'{
+    return {clientX:x, clientY:y}
+
+  }
+  posAbsInt(){
+    let posabs=this.posAbs()
+    return {clientX:posabs.clientX+1, clientY:posabs.clientY+1}
+
+  }
+  
+  posInt(){
+    return {clientX:this.rectangulo[0]+1, clientY:this.rectangulo[1]+1}        
+  }
+       
+}
+
+
+
+
+
+class Expresion extends Contenedor{}
+class TerminalTx extends Expresion{
+  constructor(v,x,y,s,n,a){
+    super(v,x,y,s,n,a)
+    this.esSinArray()
+  }
+}
+class Variable extends TerminalTx{}
+class Doble extends TerminalTx {}
+class Natural extends Doble {}
+class Digito extends Natural{}
+
+class TerminalNoExp extends Contenedor{
+  constructor(v,x,y,s,n,a){
+    super(v,x,y,s,n,a)
+    this.esSinArray()
+  }
+}
+class Espacio extends TerminalNoExp{}
+class Simbolo extends TerminalNoExp{}
+class Menos extends Simbolo{}
+class Mas extends Simbolo{}
+class Por extends Simbolo{}
+class Sobre extends Simbolo{}
+class ParentesisAbierto extends Simbolo{}
+class ParentesisCerrado extends Simbolo{}
+class Igual extends Simbolo{}
+
+class Unaria extends Expresion{
+  constructor(v,x,y,s,n,a){
+    super(v,x,y,s,n,a)
+    this.esSinArray()
+  }
+}
+class Inverso extends Unaria {}
+
+class eNearia extends Expresion{}
+class Ecuacion extends eNearia {}
+class Parentesis extends eNearia {}
+class Multiplicacion extends eNearia {}
+class Suma extends eNearia {}
+class Fraccion extends eNearia{}
+class Opuesto extends Fraccion {}
+
+class Borde extends Contenedor {
+  constructor(v,x,y,s,n,a){
+    super(v,x,y,s,n,a)
+    this.esSinArray()
+  }
+}
+
+
+let clases={Contenedor,Expresion,TerminalTx,Variable,Doble,Natural,Digito,TerminalNoExp,Espacio,Simbolo,Menos,Mas,Por,Sobre,ParentesisAbierto,ParentesisCerrado,Igual,Unaria,Inverso,eNearia,Ecuacion,Parentesis,Multiplicacion,Suma,Opuesto,Borde}
+
+
+let caracteres ={ 
+  ' ' : Espacio, 
+  '0' : Digito, 
+  '1' : Digito, 
+  '2' : Digito, 
+  '3' : Digito, 
+  '4' : Digito, 
+  '5' : Digito, 
+  '6' : Digito, 
+  '7' : Digito, 
+  '8' : Digito, 
+  '9' : Digito, 
+  '+' : Mas, 
+  '-' : Menos, 
+  '*' : Por, 
+  '/' : Sobre, 
+  '(' : ParentesisAbierto, 
+  ')' : ParentesisCerrado, 
+  '=' : Igual, 
+  'x' : Variable,
+  'y' : Variable,
+  'z' : Variable,
+}
+
+Implicaciones=[
+{
+nombre:'Im_Natural',
+valor:[
+  ['Digito','Digito',(d1,d2,s)=>s.nuevo=[new Natural(Number(d1.caracter+d2.caracter),s,null,'0DD'+ci)]],
+  ['Natural','Digito',(n,d,s)=>{n.valor=n.valor*10+Number(d.caracter);s.nuevo= [n]}],
+  ['Object','Digito',(o,d,s)=>s.nuevo=[o,new Natural(Number(d.caracter),s,null,'0OD'+ci)]],
+]},
+{nombre:'Im_Parentesis',
+valor:[
+  ['Object','Digito',()=>{debugger;}],
+  ['ParentesisAbierto','ParentesisAbierto',(pa1,pa2,s)=>{pa2.superior=pa1;s.nuevo= [pa1,pa2]}] ,
+  ['ParentesisAbierto','ParentesisCerrado',(pa,pc,s)=> pa.superior.nuevo=[new Parentesis(pa.objetos,pa.superior,null,'1PaPc'+ci)]],
+  ['ParentesisAbierto','Object',(pa,o,s)=>{pa.objetos.push(o);s.nuevo=[pa]}] ,
+  ['Object','ParentesisAbierto',(o,pa,s)=>{pa.superior=s;s.nuevo=[o,pa]} ],
+]}]
+</script>
+<script >
+   
+function imprimirTodo() {
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillText(mensajeTemporal, 50, 10);
+  context.strokeRect(0,0,canvas.width,canvas.height-1)
+  for (let i in elementos){
+    elementos[i].imprimirse(context,0,0)
+  }
+}
+
+function xy(evt){
+  let rect = canvas.getBoundingClientRect()
+  if (evt instanceof TouchEvent) return [evt.changedTouches[0].clientX - rect.left,evt.changedTouches[0].clientY - rect.top]
+  else return [evt.clientX - rect.left,evt.clientY - rect.top]
+}
+
+function posEv(pos){
+  let rect = canvas.getBoundingClientRect()
+  return{clientX:pos.clientX+rect.left,clientY:pos.clientY+ rect.top}
+}
+
+canvas.addEventListener((MODO=='mouse')?'mousedown':'touchend',mouse_oprimiendo, false);
+
+function mouse_oprimiendo(evt) { 
+  let punto=xy(evt)
+  let x=punto[0]
+  let y=punto[1]
+  elem_seleccionado=elementos.find((e)=>e.esinterior(x,y))
+  
+  if (elem_seleccionado==null){
+    if (evt.ctrlKey==true){
+      let nombr=cont_crear++
+      e=crea_contenedor(Contenedor,nombr,x,y,undefined,nombr)
+      codigo.innerHTML+='un(Contenedor).en({x:'+x+',y:'+y+'}).se_crea//'+e.nombre+'<br> '
+      elem_seleccionado=e
+    }
+    else{
+      deplaz={'x':x,'y':y}
+    }
+  }
+  else if (evt.ctrlKey==true){
+    elem_ant=elem_seleccionado.elementoEn(x,y)
+    let elem2=elem_ant.copiar()
+    codigo.innerHTML+='el('+elem_ant.nombre+').se_copia//'+elem2.nombre+'<br> '
+    elementos.push(elem2)
+    elem_seleccionado=elem2
+  }
+ imprimirTodo();
+}
+
+canvas.addEventListener((MODO=='mouse')?'mousemove':'touchmove',mouse_moviendose, false);
+
+function mouse_moviendose(evt) {
+  let punto=xy(evt)
+  let x=punto[0]
+  let y=punto[1]
+  let ele=elementos.find((e)=>e.esinterior(x,y))
+  let ele1=null
+  if (ele!=null){
+    ele.color='red'
+    if (evt.ctrlKey==true) {
+      ele1=ele.elementoEn(x,y)
+      ele1.color='blue'
+    }
+  }
+  if (deplaz!=null & elem_seleccionado==null){
+    let dy=y-deplaz.y
+    if (dy>0)
+    {
+      for (i in elementos){
+         let elem5=elementos[i]
+         mover_a(elem5,elem5.rectangulo[0],elem5.rectangulo[1]+dy)
+      }
+    }
+    deplaz={'x':x,'y':y}
+  }
+  mensajeTemporal = 'mouse' + x + ',' + y+ele;
+  if (elem_seleccionado!=null){
+     mover_a(elem_seleccionado,x,y)
+  }
+  imprimirTodo();
+  if (ele!=null)ele.color='black'
+  if (ele1!=null)ele1.color='black'
+  
+}
+
+function mover_a(eleme,x,y){
+    eleme.rectangulo[0]=x
+    eleme.rectangulo[1]=y
+    if (y>canvas.height-3*FONT_SIZE){
+      codigo.innerHTML+='el('+eleme.nombre+').se_saca<br> '
+      let img=component2img(eleme)
+      imagenes.innerHTML=' <img src="'+img+'"/><br> '+imagenes.innerHTML
+      elementos.splice(elementos.indexOf(eleme),1)
+      elem_seleccionado=null    
+    }
+}
+
+function component2img(comp) {
+      let x = comp.rectangulo[0]
+      let y = comp.rectangulo[1]
+      let anch = comp.rectangulo[2]
+      let alt = comp.rectangulo[3]
+      otro_canvas.width = anch+1
+      otro_canvas.height = alt
+      otro_context.font = context.font
+      otro_context.fillStyle = context.fillStyle
+      otro_context.textBaseline=context.textBaseline
+      comp.imprimirse(otro_context,-x,-y)            
+      return otro_canvas.toDataURL()
+      imprimirTodo();
+}
+
+
+canvas.addEventListener((MODO=='mouse')?'mouseup':'touchstart',mouse_soltando, false);
+
+function mouse_soltando(evt) {
+  if (elem_seleccionado!=null){
+    let punto=xy(evt)
+    let x=punto[0]
+    let y=punto[1]
+    codigo.innerHTML+='el('+elem_seleccionado.nombre+').se_mueve_a({x:'+x+',y:'+y+'})<br> '
+    let elem2=elementos.find((e)=>e.esinterior(x,y))
+    if (elem2!=undefined & elem2!=elem_seleccionado){
+      elementos.splice(elementos.indexOf(elem_seleccionado),1)
+      codigo.innerHTML+='el('+elem2.nombre+').se_arrima_a('+elem_seleccionado.nombre+')<br> '
+      elem2.arrima(elem_seleccionado)
+    }
+  }
+  elem_seleccionado=null
+  deplaz=null
+  imprimirTodo();
+}
+
+
+
+
+Cont_niv=document.getElementById("Niveles")
+for (let i in Implicaciones){
+  let boton=document.createElement('button');
+  boton.innerHTML+=Implicaciones[i]['nombre'];
+  boton.onclick= function (){actrualiza_implicaciones(i)}
+  Cont_niv.appendChild(boton)
+}
+
+Cont_imp=document.getElementById("Implicaciones")
+actrualiza_implicaciones=function(nivel){
+  Cont_imp.textContent=''
+  let Impl=Implicaciones[nivel]['valor']
+  for (let i in Impl){
+    let boton=document.createElement('button');
+    boton.innerHTML+=''+Impl[i];
+    Cont_imp.appendChild(boton)
+  }
+}
+
+
+function frame2(){
+  if(animacion.length==0)return;
+  animacion[0]()
+  imprimirTodo()
+}
+
+class  Elemento_crear{
+  constructor(u){
+  this.tipo=u
+  this.valor=undefined 
+  this.superior=undefined
+  this.nombre=undefined
+  this.anterior=undefined
+  this.pos=undefined
+  }
+  con(v){this.valor=v;return this}
+  bajo(s){this.superior=s;return this}
+  en(p){this.pos=p;return this}
+  get se_crea(){
+   
+  if (this.tipo==undefined)this.tipo=Contenedor
+  if (this.nombre==undefined || this.valor==undefined) {
+    if (this.valor==undefined)this.valor=cont_crear
+    if (this.nombre==undefined)this.nombre=cont_crear
+     cont_crear++
+  }
+  animacion.push(()=>{
+    if(this.superior!=undefined) {
+      this.superior=contenedores[this.superior]
+      this.pos=el_interior_de(this.superior)
+    }
+    else{
+     if(this.pos==undefined) this.pos={x:0,y:0}
+    }
+    this.x=this.pos.x
+    this.y=this.pos.y
+     crea_contenedor(this.tipo,this.valor,this.x,this.y,this.superior,this.nombre,this.anterior)
+    animacion.shift()
+  })
+  return this.nombre
+  }
+  
+}
+
+function crea_contenedor(tipo,valor,x,y,superior,nombre,anterior){
+    let ele6=new tipo(valor,x,y,superior,nombre,anterior)
+    if(superior!=undefined) {
+      ele6.superior.arrima(ele6)
+    }
+    else{
+      elementos.push(ele6);
+    }
+    contenedores[ele6.nombre]=ele6;
+    return ele6
+}
+
+function un(u){return new Elemento_crear(u)}
+function una(u){return un(u)}
+
+class  Elemento_copiar{
+  constructor(ref1){
+    this.ref=ref1
+    let u=contenedores[ref1]
+    this.anterior=u
+  }
+  get se_copia(){
+  animacion.push(()=>{
+    let elem2=contenedores[this.ref].copiar()
+    elementos.push(elem2)
+    elem_seleccionado=elem2
+    animacion.shift()
+  })
+  return this.nombre
+  }
+  se_arrima_a(pos_d){
+    animacion.push(()=>{
+      let elem8=contenedores[this.ref]
+      let elem9=contenedores[pos_d]
+      elementos.splice(elementos.indexOf(elem8),1)
+      elem9.arrima(elem8)
+     animacion.shift() ;
+    })
+  return this.nombre
+  }
+  get se_saca(){
+    animacion.push(()=>{
+      let eleme=contenedores[this.ref]
+      let img=component2img(eleme)
+      imagenes.innerHTML=' <img src="'+img+'"/><br> '+imagenes.innerHTML
+      elementos.splice(elementos.indexOf(eleme),1)
+      elem_seleccionado=null    
+      animacion.shift() ;
+    })
+  return this.nombre
+  }
+  se_mueve_a(pos_d){
+    let paso=1
+    animacion.push(()=>{//colocar un contador global.cuando para sabe cuando ocurre el error
+      let elem9=contenedores[this.ref]
+      let ox=elem9.rectangulo[0]
+      let oy=elem9.rectangulo[1]
+      let dx=(pos_d.x-ox)/PASOS
+      let dy=(pos_d.y-oy)/PASOS
+     if (paso>=PASOS){
+     elem9.rectangulo[0]=pos_d.x
+     elem9.rectangulo[1]=pos_d.y
+     
+     animacion.shift() ;
+     }
+     else
+     {
+
+     elem9.rectangulo[0]=ox+dx*paso
+     elem9.rectangulo[1]=oy+dy*paso
+     paso+=1;
+     }
+  })
+  return this.nombre
+  }
+}
+
+
+function el(u){return new Elemento_copiar(u)}
+function la(u){return el(u)}
+
+
+
+function el_interior_de(ele) {
+  return ele.posAbsInt()
+}
+
+function ejecutar(){
+  const txt= entrada.value
+  renglones=txt.split('\n')
+  for (let i in renglones){
+   codigo.innerHTML+=renglones[i]+'<br> '
+   entrada.value=''
+  }
+  eval(txt)
+}
+
+function ingresar(){
+  const txt= document.getElementById('entrada').value
+
+    let cont0=un(Contenedor).en({x:100,y:100}).se_crea
+
+
+    for (j in txt){
+      
+        let i=txt[j]
+        let caracter=caracteres[i]
+      let cont_i=un(caracter).con(i).bajo(cont0).se_crea
+   }
+}
+
+let id=setInterval(frame2,mspf);
+
+
+
+
+</script>
+<!--script src='herramientas.js'></script-->
+</body>
+</html>
